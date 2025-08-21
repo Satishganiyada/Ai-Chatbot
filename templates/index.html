@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI Chatbot</title>
+  <style>
+    /* ---------- CSS VARIABLES ---------- */
+    :root{
+      --bg1: #0f1020;           /* deep space */
+      --bg2: #14163a;           /* dark indigo */
+      --accent: #7c5cff;        /* electric purple */
+      --accent-2: #22d3ee;      /* cyan */
+      --accent-3: #f472b6;      /* pink */
+      --text: #e8ecf3;          /* soft white */
+      --muted: #a5b0c2;         /* muted */
+      --glass: rgba(255,255,255,.08);
+      --glass-strong: rgba(255,255,255,.14);
+      --shadow: 0 10px 30px rgba(0,0,0,.35);
+      --radius: 18px;
+    }
+
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+      color:var(--text); background: radial-gradient(1200px 800px at 10% 10%, #1a1a3a 0%, transparent 60%),
+                         radial-gradient(1000px 700px at 90% 20%, #1f163a 0%, transparent 60%),
+                         linear-gradient(160deg, var(--bg1), var(--bg2));
+      overflow:hidden;
+    }
+
+    /* ---------- BACKGROUND ORBS ---------- */
+    .orb{ position:absolute; inset:auto; filter: blur(40px); opacity:.45; pointer-events:none; }
+    .orb.one{ width:420px; height:420px; background: radial-gradient(circle at 30% 30%, #8b5cf6, transparent 60%); left:-80px; top:-60px; animation: float 12s ease-in-out infinite;}
+    .orb.two{ width:520px; height:520px; background: radial-gradient(circle at 60% 40%, #22d3ee, transparent 60%); right:-120px; top:10vh; animation: float 16s ease-in-out infinite reverse;}
+    .orb.three{ width:460px; height:460px; background: radial-gradient(circle at 40% 60%, #f472b6, transparent 60%); left:10vw; bottom:-160px; animation: float 18s ease-in-out infinite;}
+    @keyframes float{ 0%,100%{transform:translateY(0) translateX(0)} 50%{transform:translateY(20px) translateX(10px)} }
+
+    /* ---------- APP SHELL ---------- */
+    .wrap{ position:relative; height:100%; padding:24px; display:grid; place-items:center; }
+
+    .card{
+      width:min(980px, 96vw); height:min(86vh, 920px);
+      background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.03));
+      border: 1px solid rgba(255,255,255,.14);
+      border-radius: 28px; box-shadow: var(--shadow);
+      backdrop-filter: blur(14px) saturate(1.2);
+      display:grid; grid-template-rows: auto 1fr auto; overflow:hidden; position:relative;
+    }
+
+    /* ---------- HEADER ---------- */
+    .header{ display:flex; align-items:center; gap:14px; padding:18px 22px; border-bottom:1px solid rgba(255,255,255,.12); }
+    .logo{ width:42px; height:42px; border-radius:12px; background: conic-gradient(from 90deg, var(--accent), var(--accent-2), var(--accent-3), var(--accent));
+           box-shadow: 0 6px 22px rgba(124,92,255,.35); animation: spin 8s linear infinite; }
+    @keyframes spin{ to{ transform: rotate(360deg);} }
+    .title{ font-weight:800; letter-spacing:.2px; font-size:1.1rem; }
+    .badges{ margin-left:auto; display:flex; gap:8px; }
+    .badge{ padding:6px 10px; font-size:.8rem; color:#0b1220; background:linear-gradient(90deg, #a78bfa, #67e8f9, #f9a8d4); border-radius:999px; font-weight:700; }
+
+    /* ---------- MESSAGES ---------- */
+    .messages{ position:relative; padding:18px; overflow:auto; }
+    .messages-inner{ max-width:780px; margin:0 auto; display:flex; flex-direction:column; gap:12px; padding-bottom:10px; }
+
+    .bubble{ display:flex; gap:12px; align-items:flex-end; }
+    .bubble .avatar{ width:36px; height:36px; border-radius:50%; display:grid; place-items:center; background:var(--glass-strong); border:1px solid rgba(255,255,255,.15) }
+    .bubble.user{ flex-direction: row-reverse; }
+
+    .msg{ max-width:70%; padding:12px 14px; border-radius:16px; line-height:1.45; font-size:.98rem; position:relative; animation: pop .2s ease-out both; }
+    .msg.bot{ background: rgba(255,255,255,.09); border:1px solid rgba(255,255,255,.12); }
+    .msg.user{ background: linear-gradient(135deg, rgba(124,92,255,.9), rgba(34,211,238,.9)); box-shadow: 0 10px 22px rgba(34,211,238,.25); }
+    @keyframes pop{ from{ transform:translateY(6px) scale(.98); opacity:0 } to{ transform:none; opacity:1 } }
+
+    /* ---------- TYPING INDICATOR ---------- */
+    .typing{ display:inline-flex; gap:6px; align-items:center; }
+    .dot{ width:6px; height:6px; border-radius:50%; background: #cfe8ff; opacity:.75; animation: blink 1.2s infinite ease-in-out; }
+    .dot:nth-child(2){ animation-delay:.2s }
+    .dot:nth-child(3){ animation-delay:.4s }
+    @keyframes blink{ 0%,80%,100%{ transform:translateY(0); opacity:.5 } 40%{ transform:translateY(-4px); opacity:1 } }
+
+    /* ---------- INPUT BAR ---------- */
+    .composer{ padding:16px; border-top:1px solid rgba(255,255,255,.12); background: linear-gradient(180deg, rgba(0,0,0,.08), rgba(255,255,255,.02)); }
+    .composer-inner{ max-width:780px; margin:0 auto; display:flex; gap:10px; align-items:center; }
+    .field{
+      flex:1; position:relative; border-radius: var(--radius); overflow:hidden;
+      background: rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.14);
+    }
+    .input{ width:100%; padding:14px 48px 14px 14px; background:transparent; border:none; outline:none; color:var(--text); font-size:1rem; }
+    .input::placeholder{ color:#c8d3e1aa }
+
+    .send{ width:42px; height:42px; border-radius: 14px; border:none; cursor:pointer; display:grid; place-items:center; font-weight:700; color:#0b1220;
+      background: radial-gradient(150% 150% at 30% 30%, #fff 0, #f5f5ff 30%, #c7bfff 70%),
+                  conic-gradient(from 120deg, #a78bfa, #67e8f9, #f9a8d4, #a78bfa);
+      box-shadow: 0 8px 18px rgba(124,92,255,.35);
+      transition: transform .12s ease, box-shadow .2s ease; }
+    .send:hover{ transform: translateY(-1px) scale(1.03); box-shadow: 0 14px 28px rgba(124,92,255,.45); }
+    .send:active{ transform: translateY(0) scale(.98); }
+
+    .send svg{ width:20px; height:20px; }
+
+    .kudos{ font-size:.78rem; color:var(--muted); text-align:center; padding:6px 0 10px; }
+
+    /* ---------- SCROLLBARS ---------- */
+    .messages::-webkit-scrollbar{ width:10px }
+    .messages::-webkit-scrollbar-thumb{ background: linear-gradient(180deg, #8b5cf67a, #22d3ee7a); border-radius:999px }
+    .messages::-webkit-scrollbar-track{ background: transparent }
+
+    /* ---------- RESPONSIVE ---------- */
+    @media (max-width:640px){
+      .msg{ max-width:85% }
+      .title{ font-size:1rem }
+    }
+  </style>
+</head>
+<body>
+  <!-- Animated background orbs -->
+  <div class="orb one"></div>
+  <div class="orb two"></div>
+  <div class="orb three"></div>
+
+  <div class="wrap">
+    <section class="card" aria-label="Chatbot">
+      <!-- Header -->
+      <header class="header">
+        <div class="logo" aria-hidden="true"></div>
+        <div class="title">Astra — AI Chatbot</div>
+        <div class="badges">
+          <span class="badge">Realtime</span>
+          <span class="badge">Animated UI</span>
+        </div>
+      </header>
+
+      <!-- Messages -->
+      <main id="messages" class="messages">
+        <div id="list" class="messages-inner">
+          <div class="bubble bot">
+            <div class="avatar">🤖</div>
+            <div class="msg bot">Hi! I’m Astra. Ask me anything ✨</div>
+          </div>
+        </div>
+      </main>
+
+      <!-- Composer -->
+      <footer class="composer">
+        <div class="composer-inner">
+          <div class="field">
+            <input id="input" class="input" placeholder="Type your message…" autocomplete="off" />
+          </div>
+          <button id="send" class="send" title="Send" aria-label="Send">
+            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+              <path d="M3 11.5L21 3L12.5 21L11 13L3 11.5Z" stroke="#111827" stroke-width="2" stroke-linejoin="round"/>
+            </svg>
+          </button>
+        </div>
+        <div class="kudos">Built with ❤️ — smooth glassmorphism + neon gradients + lively micro‑animations.</div>
+      </footer>
+    </section>
+  </div>
+
+  <script>
+    const list = document.getElementById('list');
+    const input = document.getElementById('input');
+    const sendBtn = document.getElementById('send');
+    const messages = document.getElementById('messages');
+
+    function el(tag, cls, text){ const e = document.createElement(tag); if(cls) e.className = cls; if(text) e.textContent = text; return e; }
+
+    function addBubble(role, text){
+      const row = el('div', `bubble ${role}`);
+      const avatar = el('div', 'avatar');
+      avatar.textContent = role === 'user' ? '🧑' : '🤖';
+      const msg = el('div', `msg ${role === 'user' ? 'user' : 'bot'}`);
+      msg.innerHTML = text;
+      row.appendChild(avatar);
+      row.appendChild(msg);
+      list.appendChild(row);
+      messages.scrollTop = messages.scrollHeight;
+    }
+
+    function addTyping(){
+      const row = el('div', 'bubble bot');
+      row.id = 'typing-row';
+      const avatar = el('div', 'avatar'); avatar.textContent = '🤖';
+      const msg = el('div', 'msg bot');
+      const dots = el('div', 'typing');
+      dots.innerHTML = '<span class="dot"></span><span class="dot"></span><span class="dot"></span>';
+      msg.appendChild(dots); row.appendChild(avatar); row.appendChild(msg); list.appendChild(row);
+      messages.scrollTop = messages.scrollHeight;
+    }
+
+    function removeTyping(){ const t = document.getElementById('typing-row'); if(t) t.remove(); }
+
+    async function send(){
+      const text = input.value.trim(); if(!text) return; input.value = '';
+      addBubble('user', escapeHtml(text));
+      addTyping();
+      try{
+        const res = await fetch('/get', {
+          method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({message:text})
+        });
+        const data = await res.json();
+        removeTyping();
+        addBubble('bot', escapeHtml(data.response));
+      }catch(e){
+        removeTyping();
+        addBubble('bot', '⚠️ Connection error. Please try again.');
+      }
+    }
+
+    sendBtn.addEventListener('click', send);
+    input.addEventListener('keydown', (e)=>{ if(e.key==='Enter'){ e.preventDefault(); send(); }});
+
+    function escapeHtml(str){
+      return str.replace(/[&<>"]/g, s => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[s]));
+    }
+  </script>
+</body>
+</html>
+
